@@ -1,0 +1,19 @@
+# Dataset e dati pesanti
+data/
+
+# Output rigenerabili
+results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Ambienti
+.env
+*.egg-info/
+
+# Editor
+.vscode/
+.idea/
