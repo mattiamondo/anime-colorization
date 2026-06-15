@@ -1,0 +1,19 @@
+{
+  "variant": "02_pix2pix",
+  "config": {
+    "image_size": 256,
+    "batch_size": 16,
+    "num_workers": 8,
+    "epochs": 50,
+    "lr": 0.0002,
+    "lambda_l1": 100.0,
+    "lambda_gan": 1.0,
+    "lambda_perceptual": 0.0
+  },
+  "metrics": {
+    "psnr": 16.26393699645996,
+    "ssim": 0.7997269630432129,
+    "lpips": 0.19099029898643494,
+    "fid": 49.12768922288399
+  }
+}

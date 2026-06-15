@@ -1,0 +1,19 @@
+{
+  "variant": "03_pix2pix_perceptual",
+  "config": {
+    "image_size": 256,
+    "batch_size": 16,
+    "num_workers": 8,
+    "epochs": 50,
+    "lr": 0.0002,
+    "lambda_l1": 100.0,
+    "lambda_gan": 1.0,
+    "lambda_perceptual": 10.0
+  },
+  "metrics": {
+    "psnr": 16.285198211669922,
+    "ssim": 0.813014030456543,
+    "lpips": 0.1857001781463623,
+    "fid": 37.25303052095114
+  }
+}

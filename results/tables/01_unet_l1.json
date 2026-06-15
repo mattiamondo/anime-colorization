@@ -1,0 +1,19 @@
+{
+  "variant": "01_unet_l1",
+  "config": {
+    "image_size": 256,
+    "batch_size": 16,
+    "num_workers": 8,
+    "epochs": 50,
+    "lr": 0.0002,
+    "lambda_l1": 100.0,
+    "lambda_gan": 0.0,
+    "lambda_perceptual": 0.0
+  },
+  "metrics": {
+    "psnr": 16.673927307128906,
+    "ssim": 0.8111435174942017,
+    "lpips": 0.19516418874263763,
+    "fid": 93.71012492821251
+  }
+}
