@@ -1,0 +1,21 @@
+name: anime-colorization
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pytorch
+  - torchvision
+  - pytorch-cuda=12.1
+  - numpy
+  - matplotlib
+  - pillow
+  - tqdm
+  - jupyter
+  - ipykernel
+  - pip
+  - pip:
+      - torchmetrics[image]   # SSIM, PSNR, FID (uses torch-fidelity backend)
+      - pytorch-fid           # reference FID implementation for the report
+      - kaggle                # dataset download

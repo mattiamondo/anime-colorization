@@ -1,0 +1,22 @@
+# Data and heavy artifacts
+data/
+checkpoints/
+*.pth
+*.pt
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info/
+
+# Environment / IDE
+.env
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# FID results folder
+results/fid
