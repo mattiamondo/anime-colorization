@@ -1,5 +1,5 @@
 # Data and heavy artifacts
-data/
+/data/
 checkpoints/
 *.pth
 *.pt
