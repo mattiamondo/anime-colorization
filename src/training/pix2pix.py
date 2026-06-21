@@ -8,25 +8,30 @@ A single trainer covers three ablation steps via loss weights:
 
 import torch
 import torch.nn as nn
+from torchvision.utils import make_grid
 
 from ..losses import GANLoss, VGGPerceptualLoss
-from ..models import PatchGANDiscriminator, UNetGenerator
+from ..models import GlobalDiscriminator, PatchGANDiscriminator, UNetGenerator
 from .base import BaseTrainer
 
 
 class Pix2PixTrainer(BaseTrainer):
-    """U-Net generator + optional PatchGAN + optional perceptual loss.
+    """U-Net generator + optional discriminator + optional perceptual loss.
 
     Args:
         lambda_l1: weight of the pixel-wise L1 loss (100 in the paper).
         lambda_gan: weight of the adversarial loss (0 disables the
             discriminator entirely -> variant 1).
         lambda_perceptual: weight of the VGG perceptual loss (0 -> off).
+        discriminator_type: "patch" (70×70 PatchGAN, default) or "global"
+            (single-scalar global discriminator, variant 6).
         lr / betas: Adam hyperparameters (paper defaults).
     """
 
     def __init__(self, *, lambda_l1: float = 100.0, lambda_gan: float = 1.0,
-                 lambda_perceptual: float = 0.0, lr: float = 2e-4,
+                 lambda_perceptual: float = 0.0,
+                 discriminator_type: str = "patch",
+                 lr: float = 2e-4,
                  betas: tuple[float, float] = (0.5, 0.999), **kwargs):
         super().__init__(**kwargs)
         self.lambda_l1 = lambda_l1
@@ -39,9 +44,15 @@ class Pix2PixTrainer(BaseTrainer):
         self.l1_loss = nn.L1Loss()
 
         if lambda_gan > 0:
-            # Conditional discriminator: sees sketch + (real|fake) color
-            self.discriminator = self.register_network(
-                "discriminator", PatchGANDiscriminator(in_channels=6))
+            if discriminator_type == "global":
+                disc = GlobalDiscriminator(in_channels=6)
+            elif discriminator_type == "patch":
+                disc = PatchGANDiscriminator(in_channels=6)
+            else:
+                raise ValueError(
+                    f"discriminator_type must be 'patch' or 'global', "
+                    f"got {discriminator_type!r}")
+            self.discriminator = self.register_network("discriminator", disc)
             self.optimizers["discriminator"] = torch.optim.Adam(
                 self.discriminator.parameters(), lr=lr, betas=betas)
             self.gan_loss = GANLoss("vanilla").to(self.device)
@@ -101,3 +112,25 @@ class Pix2PixTrainer(BaseTrainer):
         """Colorize a batch of sketches (eval mode, no grad)."""
         self.generator.eval()
         return self.generator(sketch.to(self.device)).cpu()
+
+    def _wandb_log_images(self) -> dict:
+        """Log sketch | prediction | ground truth grid to W&B."""
+        if self._wandb is None:
+            return {}
+        self.generator.eval()
+        batch = next(iter(self.val_loader))
+        batch = self._batch_to_device(batch)
+        sketch = batch["sketch"][:4]
+        color  = batch["color"][:4]
+        with torch.no_grad():
+            fake = self.generator(sketch)
+
+        def to_grid(t: torch.Tensor):
+            grid = make_grid(t.cpu() * 0.5 + 0.5, nrow=4, padding=2).clamp(0, 1)
+            return self._wandb.Image(grid.permute(1, 2, 0).numpy())
+
+        return {
+            "val/sketch":       to_grid(sketch),
+            "val/prediction":   to_grid(fake),
+            "val/ground_truth": to_grid(color),
+        }

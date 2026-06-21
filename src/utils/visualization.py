@@ -19,23 +19,74 @@ def _save(fig, save_path: str | None) -> None:
 
 
 def plot_loss_curves(history: dict[str, list[float]], title: str = "",
-                     save_path: str | None = None):
-    """Plot train/val loss curves in separate subplots."""
-    train_keys = [k for k in history if k.startswith("train_")]
-    val_keys   = [k for k in history if k.startswith("val_")]
+                     save_path: str | None = None) -> None:
+    """Plot train/val loss curves with variant-aware panel layout.
+
+    Automatically detects Pix2Pix vs CycleGAN from history keys and splits
+    curves into dedicated panels (generator components / discriminator / val).
+    ``train_g`` (weighted total generator loss) is excluded from Pix2Pix plots
+    because it is redundant with the individual unweighted component losses.
+    CycleGAN keeps ``train_G`` since the adversarial component is not logged
+    separately and the total loss is the only generator-level trend available.
+    """
+    _LABELS: dict[str, str] = {
+        "train_l1":         "L₁ (generator)",
+        "train_gan":        "GAN (generator)",
+        "train_perceptual": "Perceptual (generator)",
+        "train_d":          "Discriminator",
+        "train_G":          "Total G loss",
+        "train_D_color":    "Disc. (color)",
+        "train_D_sketch":   "Disc. (sketch)",
+        "train_cycle":      "Cycle-consistency",
+        "train_idt":        "Identity",
+        "val_l1":           "Val L₁",
+    }
+
+    val_keys = [k for k in history if k.startswith("val_")]
+
+    if "train_cycle" in history:
+        # CycleGAN: 3 panels — generator | discriminators | val
+        gen_keys  = [k for k in ("train_G", "train_cycle", "train_idt") if k in history]
+        disc_keys = [k for k in ("train_D_color", "train_D_sketch") if k in history]
+        panels = [
+            (gen_keys,  "Generator losses"),
+            (disc_keys, "Discriminator losses"),
+            (val_keys,  "Val losses"),
+        ]
+        fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+    else:
+        # Pix2Pix family: exclude train_g
+        gen_keys  = [k for k in ("train_l1", "train_gan", "train_perceptual")
+                     if k in history]
+        disc_keys = [k for k in ("train_d",) if k in history]
+        if disc_keys:
+            # Variants with discriminator: 3 panels
+            panels = [
+                (gen_keys,  "Generator losses"),
+                (disc_keys, "Discriminator loss"),
+                (val_keys,  "Val losses"),
+            ]
+            fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+        else:
+            # V1 — no adversarial component: 2 panels
+            panels = [
+                (gen_keys, "Train losses"),
+                (val_keys, "Val losses"),
+            ]
+            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
     epochs = range(1, len(next(iter(history.values()))) + 1)
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    for key in train_keys:
-        axes[0].plot(epochs, history[key], label=key, linewidth=2)
-    for key in val_keys:
-        axes[1].plot(epochs, history[key], label=key, linewidth=2)
-    for ax, subtitle in zip(axes, ("Train losses", "Val losses")):
+
+    for ax, (keys, subtitle) in zip(axes, panels):
+        for key in keys:
+            ax.plot(epochs, history[key], label=_LABELS.get(key, key), linewidth=2)
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Loss (log scale)")
         ax.set_yscale("log")
         ax.set_title(subtitle)
         ax.legend()
         ax.grid(alpha=0.3, which="both")
+
     fig.suptitle(title, fontsize=14, fontweight="bold")
     plt.tight_layout()
     _save(fig, save_path)
@@ -44,6 +95,7 @@ def plot_loss_curves(history: dict[str, list[float]], title: str = "",
 
 def qualitative_grid(sketch: torch.Tensor, prediction: torch.Tensor,
                      target: torch.Tensor, n_rows: int = 4,
+                     title: str | None = None,
                      save_path: str | None = None):
     """Grid with columns: sketch | prediction | ground truth"""
     n_rows = min(n_rows, sketch.shape[0])
@@ -58,6 +110,143 @@ def qualitative_grid(sketch: torch.Tensor, prediction: torch.Tensor,
             ax.axis("off")
             if row == 0:
                 ax.set_title(name)
+    if title:
+        fig.suptitle(title, fontsize=12, y=1.01)
+    fig.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def qualitative_grid_compare(sketch: torch.Tensor,
+                             pred_last: torch.Tensor, pred_best: torch.Tensor,
+                             target: torch.Tensor,
+                             epoch_last: int, epoch_best: int,
+                             n_rows: int = 4,
+                             save_path: str | None = None):
+    """4-column grid: sketch | last.pt (ep N) | best.pt (ep M) | ground truth."""
+    n_rows = min(n_rows, sketch.shape[0])
+    columns = [
+        (f"sketch", sketch),
+        (f"last.pt  (ep. {epoch_last})", pred_last),
+        (f"best.pt  (ep. {epoch_best})", pred_best),
+        ("ground truth", target),
+    ]
+    fig, axes = plt.subplots(n_rows, 4, figsize=(12, 3 * n_rows))
+    axes = np.atleast_2d(axes)
+    for row in range(n_rows):
+        for col, (name, batch) in enumerate(columns):
+            ax = axes[row, col]
+            ax.imshow(_denorm(batch[row]))
+            ax.axis("off")
+            if row == 0:
+                ax.set_title(name, fontsize=9)
+    fig.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def cycle_grid(sketch: torch.Tensor, fake_color: torch.Tensor,
+               rec_sketch: torch.Tensor, target: torch.Tensor,
+               n_rows: int = 4, save_path: str | None = None):
+    """Forward-cycle visualization for CycleGAN: sketch → fake color → rec. sketch.
+
+    Columns: sketch (input) | G_s2c(sketch) | G_c2s(G_s2c(sketch)) | ground truth.
+    Shows that cycle-consistency is satisfied even when colorization is wrong.
+    """
+    n_rows = min(n_rows, sketch.shape[0])
+    columns = [
+        ("sketch  (input)", sketch),
+        ("G_s2c →  fake color", fake_color),
+        ("G_c2s →  rec. sketch", rec_sketch),
+        ("ground truth", target),
+    ]
+    fig, axes = plt.subplots(n_rows, 4, figsize=(12, 3 * n_rows))
+    axes = np.atleast_2d(axes)
+    for row in range(n_rows):
+        for col, (name, batch) in enumerate(columns):
+            ax = axes[row, col]
+            ax.imshow(_denorm(batch[row]))
+            ax.axis("off")
+            if row == 0:
+                ax.set_title(name, fontsize=9)
+    fig.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def metrics_bar_chart(metrics: dict[str, dict[str, float]], title: str = "",
+                      save_path: str | None = None):
+    """1×4 bar chart: last.pt vs best.pt for PSNR, SSIM, LPIPS, FID.
+
+    Y-axes are anchored to the theoretical/practical maximum of each metric so
+    bar heights reflect actual quality, not just relative difference between runs.
+
+    Args:
+        metrics: {"last": {metric: value, ...}, "best": {metric: value, ...}}
+        title: optional suptitle
+        save_path: optional file path to save the figure
+    """
+    # (key, label, higher_is_better, y_max — None = auto with 25% headroom)
+    metric_meta = [
+        ("psnr",  "PSNR (dB)",  True,  50.0),   # 50 dB practical ceiling
+        ("ssim",  "SSIM",       True,   1.0),    # [0, 1] by definition
+        ("lpips", "LPIPS",      False,  1.0),    # [0, 1] by definition
+        ("fid",   "FID",        False, None),    # unbounded — auto-scale
+    ]
+    colors = {"last": "#4C72B0", "best": "#DD8452"}
+    fig, axes = plt.subplots(1, 4, figsize=(12, 4))
+    for ax, (key, label, higher_better, y_max) in zip(axes, metric_meta):
+        vals = [float(metrics["last"].get(key, float("nan"))),
+                float(metrics["best"].get(key, float("nan")))]
+        bars = ax.bar(["last.pt", "best.pt"], vals,
+                      color=[colors["last"], colors["best"]],
+                      width=0.5, edgecolor="white", linewidth=0.8)
+        if y_max is not None:
+            ax.set_ylim(0, y_max)
+        else:
+            data_max = max((v for v in vals if not np.isnan(v)), default=1.0)
+            ax.set_ylim(0, data_max * 1.25)
+        ax_top = ax.get_ylim()[1]
+        for bar, v in zip(bars, vals):
+            ax.text(bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + ax_top * 0.02,
+                    f"{v:.4f}", ha="center", va="bottom", fontsize=8)
+        ax.set_title(label, fontsize=10)
+        ax.set_ylabel("↑ higher better" if higher_better else "↓ lower better",
+                      fontsize=7, color="gray")
+        ax.tick_params(axis="x", labelsize=9)
+        ax.grid(axis="y", alpha=0.3)
+        ax.spines[["top", "right"]].set_visible(False)
+    if title:
+        fig.suptitle(title, fontsize=12, fontweight="bold")
+    fig.tight_layout()
+    _save(fig, save_path)
+    plt.show()
+
+
+def diversity_grid(sketch: torch.Tensor, samples: torch.Tensor,
+                   target: torch.Tensor, save_path: str | None = None):
+    """Grid showing diverse CVAE colorizations for a single sketch.
+
+    Args:
+        sketch: (1, 3, H, W) or the first element is used.
+        samples: (n_samples, 1, 3, H, W) from CVAETrainer.sample_diverse.
+        target: (1, 3, H, W) ground truth.
+        save_path: optional file path to save the figure.
+
+    Columns: sketch | sample_1 | ... | sample_n | ground truth
+    """
+    n_samples = samples.shape[0]
+    columns = (
+        [("sketch", sketch[0])]
+        + [(f"sample {i+1}", samples[i, 0]) for i in range(n_samples)]
+        + [("ground truth", target[0])]
+    )
+    fig, axes = plt.subplots(1, len(columns), figsize=(2.5 * len(columns), 3))
+    for ax, (name, img) in zip(axes, columns):
+        ax.imshow(_denorm(img))
+        ax.axis("off")
+        ax.set_title(name, fontsize=9)
     fig.tight_layout()
     _save(fig, save_path)
     plt.show()

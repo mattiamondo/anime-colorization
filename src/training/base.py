@@ -5,6 +5,7 @@ Responsibilities common to every experiment:
 - loss curve logging (history dict, saved to results/)
 - best-checkpoint saving by validation metric
 - resuming from checkpoint
+- optional Weights & Biases integration (scalars + image hook)
 """
 
 import math
@@ -29,22 +30,59 @@ class BaseTrainer:
         monitor: validation metric used to select the best checkpoint
             (e.g. "val_l1").
         device: torch device string.
+        wandb_project: W&B project name. Pass None (default) to disable W&B.
+        wandb_run_name: optional display name for the run.
+        wandb_config: dict of hyperparameters to record in W&B.
+        wandb_log_images_every: log qualitative images every N epochs (0 = never).
     """
 
     def __init__(self, train_loader, val_loader, checkpoint_dir: str | Path,
-                 monitor: str = "val_l1", device: str = "cuda"):
+                 monitor: str = "val_l1", device: str = "cuda",
+                 patience: int = 20, early_stopping: bool = False,
+                 wandb_project: str | None = None,
+                 wandb_run_name: str | None = None,
+                 wandb_config: dict | None = None,
+                 wandb_log_images_every: int = 5):
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.checkpoint_dir = Path(checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         self.monitor = monitor
         self.device = torch.device(device)
+        self.patience = patience
+        self.early_stopping = early_stopping
+        self.wandb_log_images_every = wandb_log_images_every
 
         self.networks: dict[str, nn.Module] = {}
         self.optimizers: dict[str, torch.optim.Optimizer] = {}
         self.history: dict[str, list[float]] = {}
         self.best_metric = math.inf
         self.epoch = 0
+
+        self._wandb = None
+        if wandb_project is not None:
+            try:
+                import wandb
+                wandb.init(
+                    project=wandb_project,
+                    name=wandb_run_name,
+                    config=wandb_config or {},
+                    resume="allow",
+                )
+                self._wandb = wandb
+            except Exception as exc:
+                print(f"[wandb] init failed, continuing without logging: {exc}")
+
+    # W&B helpers
+    def _wandb_log_images(self) -> dict:
+        """Override in subclasses to return a dict of ``wandb.Image`` objects
+        for qualitative logging. Called every ``wandb_log_images_every`` epochs."""
+        return {}
+
+    def finish(self) -> None:
+        """Call at the end of the experiment to flush and close the W&B run."""
+        if self._wandb is not None:
+            self._wandb.finish()
 
     # Subclass interface
     def register_network(self, name: str, module: nn.Module) -> nn.Module:
@@ -62,6 +100,8 @@ class BaseTrainer:
     # Train/val loop
     def fit(self, epochs: int) -> dict[str, list[float]]:
         """Run the train/val loop up to ``epochs`` total epochs."""
+        no_improve = 0
+
         for epoch in range(self.epoch + 1, epochs + 1):
             self.epoch = epoch
 
@@ -80,14 +120,29 @@ class BaseTrainer:
                 self.history.setdefault(key, []).append(value)
 
             self.save_checkpoint("last.pt")
-            monitored = logs.get(self.monitor) # e.g., logs.get("val_l1")
+            monitored = logs.get(self.monitor)
             if monitored is not None and monitored < self.best_metric:
-                # Save the new record
                 self.best_metric = monitored
                 self.save_checkpoint("best.pt")
+                no_improve = 0
+            else:
+                no_improve += 1
 
             summary = " | ".join(f"{k}={v:.4f}" for k, v in logs.items())
             print(f"epoch {epoch:3d}/{epochs} | {summary}")
+
+            if self._wandb is not None:
+                self._wandb.log(logs, step=self.epoch)
+                if (self.wandb_log_images_every > 0
+                        and self.epoch % self.wandb_log_images_every == 0):
+                    img_logs = self._wandb_log_images()
+                    if img_logs:
+                        self._wandb.log(img_logs, step=self.epoch)
+
+            if self.early_stopping and no_improve >= self.patience:
+                print(f"Early stopping: no improvement in {self.patience} epochs.")
+                break
+
         return self.history
 
     def _run_epoch(self, loader, step_fn, desc: str) -> dict[str, float]:

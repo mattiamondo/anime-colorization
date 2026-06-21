@@ -10,8 +10,14 @@ The Kaggle archive ships only ``train/`` and ``val/`` folders:
 - ``val`` / ``test``: the Kaggle ``val`` folder, sorted by filename, first
   half -> val, second half -> test. Sorting makes the split reproducible
   without any RNG.
+
+Optional colorgram support: if a ``colorgram/`` subdirectory exists under
+``root`` (or an explicit ``colorgram_dir`` is provided), each sample also
+returns a ``colorgram`` tensor of shape (16, 3) with RGB values in [-1, 1],
+representing the 4×4 dominant-color palette of the color target.
 """
 
+import json
 from pathlib import Path
 
 import torch
@@ -35,7 +41,8 @@ class AnimeColorizationDataset(Dataset):
     """
 
     def __init__(self, root: str | Path, split: str = "train",
-                 image_size: int = 256, paired: bool = True):
+                 image_size: int = 256, paired: bool = True,
+                 colorgram_dir: str | Path | None = None):
         super().__init__()
         if split not in _SPLITS:
             raise ValueError(f"split must be one of {_SPLITS}, got {split!r}")
@@ -43,6 +50,13 @@ class AnimeColorizationDataset(Dataset):
         self.split = split
         self.image_size = image_size
         self.paired = paired
+
+        # Colorgram directory: auto-detect if not specified.
+        if colorgram_dir is not None:
+            self.colorgram_dir: Path | None = Path(colorgram_dir)
+        else:
+            candidate = self.root / "colorgram"
+            self.colorgram_dir = candidate if candidate.is_dir() else None
 
         if split == "train":
             folder = self.root / "train"
@@ -80,6 +94,24 @@ class AnimeColorizationDataset(Dataset):
         sketch = image.crop((half, 0, width, height))
         return sketch, color
 
+    def _load_colorgram(self, index: int) -> torch.Tensor | None:
+        """Load colorgram for image at ``index``. Returns (16, 3) float tensor
+        with values in [-1, 1], or None if no colorgram directory is set."""
+        if self.colorgram_dir is None:
+            return None
+        stem = self.files[index].stem
+        json_path = self.colorgram_dir / f"{stem}.json"
+        if not json_path.exists():
+            return None
+        data = json.loads(json_path.read_text())
+        colors: list[list[int]] = []
+        for row in sorted(data.keys(), key=int):
+            for col in sorted(data[row].keys(), key=int):
+                colors.append(data[row][col])
+        # (16, 3) float in [0, 255] → [-1, 1]
+        t = torch.tensor(colors, dtype=torch.float32) / 127.5 - 1.0
+        return t
+
     def __getitem__(self, index: int) -> dict[str, torch.Tensor]:
         if self.paired:
             sketch_pil, color_pil = self._load_halves(index)
@@ -88,7 +120,11 @@ class AnimeColorizationDataset(Dataset):
             color_index = int(self.color_perm[index])
             _, color_pil = self._load_halves(color_index)
 
-        return {
+        sample: dict[str, torch.Tensor] = {
             "sketch": self.transform(sketch_pil),
             "color": self.transform(color_pil),
         }
+        colorgram = self._load_colorgram(index)
+        if colorgram is not None:
+            sample["colorgram"] = colorgram
+        return sample
