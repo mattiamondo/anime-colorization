@@ -1,8 +1,17 @@
 # Data and heavy artifacts
 /data/
-checkpoints/
+/checkpoints/
+/checkpoints_v1/
+/wandb/
 *.pth
 *.pt
+
+# Results (figures, tables, logs, FID images — regenerated from notebooks)
+/results/
+
+# Report build artifacts and sources (keep only the compiled PDF)
+/report/
+!/report/main.pdf
 
 # Python
 __pycache__/
@@ -17,6 +26,3 @@ __pycache__/
 
 # OS
 .DS_Store
-
-# FID results folder
-results/fid
