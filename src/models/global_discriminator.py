@@ -1,20 +1,11 @@
-"""Global discriminator: classifies the entire image with a single scalar.
-
-Used by variant 6 (Pix2Pix + global discriminator) to contrast the
-patch-level adversarial signal of PatchGAN with a global real/fake judgment.
-"""
+"""Global discriminator: classifies the entire image with a single scalar."""
 
 import torch
 import torch.nn as nn
 
 
 class GlobalDiscriminator(nn.Module):
-    """Global discriminator (single scalar output per image).
-
-    Same C64-C128-C256-C512 backbone as PatchGAN but the C512 block uses
-    stride=2 (not 1), followed by global average pooling and a linear head,
-    so the whole image is judged with one logit instead of a spatial patch map.
-
+    """
     Args:
         in_channels: 6 for conditional Pix2Pix (sketch + image), 3 otherwise.
         base_filters: filters in the first conv block (default 64).
