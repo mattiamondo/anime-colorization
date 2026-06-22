@@ -224,34 +224,6 @@ def metrics_bar_chart(metrics: dict[str, dict[str, float]], title: str = "",
     plt.show()
 
 
-def diversity_grid(sketch: torch.Tensor, samples: torch.Tensor,
-                   target: torch.Tensor, save_path: str | None = None):
-    """Grid showing diverse CVAE colorizations for a single sketch.
-
-    Args:
-        sketch: (1, 3, H, W) or the first element is used.
-        samples: (n_samples, 1, 3, H, W) from CVAETrainer.sample_diverse.
-        target: (1, 3, H, W) ground truth.
-        save_path: optional file path to save the figure.
-
-    Columns: sketch | sample_1 | ... | sample_n | ground truth
-    """
-    n_samples = samples.shape[0]
-    columns = (
-        [("sketch", sketch[0])]
-        + [(f"sample {i+1}", samples[i, 0]) for i in range(n_samples)]
-        + [("ground truth", target[0])]
-    )
-    fig, axes = plt.subplots(1, len(columns), figsize=(2.5 * len(columns), 3))
-    for ax, (name, img) in zip(axes, columns):
-        ax.imshow(_denorm(img))
-        ax.axis("off")
-        ax.set_title(name, fontsize=9)
-    fig.tight_layout()
-    _save(fig, save_path)
-    plt.show()
-
-
 def multi_model_grid(sketch: torch.Tensor, predictions: dict[str, torch.Tensor],
                      target: torch.Tensor, save_path: str | None = None):
     """Grid comparing all variants on the same sketches.
