@@ -4,12 +4,11 @@ Each raw file is a 1024x512 side-by-side image: left half is the color
 target, right half is the sketch. The split into the two halves happens at
 load time.
 
-The Kaggle archive ships only ``train/`` and ``val/`` folders:
+The Kaggle archive ships ``train/`` and ``val/`` folders:
 
-- ``train``: the Kaggle ``train`` folder as-is.
-- ``val`` / ``test``: the Kaggle ``val`` folder, sorted by filename, first
-  half -> val, second half -> test. Sorting makes the split reproducible
-  without any RNG.
+- ``train``: kept unchanged.
+- ``val`` / ``test``: ``val`` folder, sorted by filename, first
+  half -> val, second half -> test.
 """
 
 from pathlib import Path
@@ -23,10 +22,9 @@ _SPLITS = ("train", "val", "test")
 
 
 class AnimeColorizationDataset(Dataset):
-    """Paired sketch/color dataset.
-
+    """
     Args:
-        root: path to the extracted Kaggle dataset (data/anime_colorization).
+        root: path to the extracted dataset (data/anime_colorization).
         split: one of "train", "val", "test".
         image_size: working resolution (default 256).
         paired: if False, sketch and color samples are drawn independently
