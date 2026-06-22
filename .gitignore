@@ -10,8 +10,8 @@
 /results/
 
 # Report build artifacts and sources (keep only the compiled PDF)
-/report/
-!/report/main.pdf
+/report/*
+!/report/Report_VR538106.pdf
 
 # Python
 __pycache__/
