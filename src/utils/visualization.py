@@ -174,56 +174,6 @@ def cycle_grid(sketch: torch.Tensor, fake_color: torch.Tensor,
     plt.show()
 
 
-def metrics_bar_chart(metrics: dict[str, dict[str, float]], title: str = "",
-                      save_path: str | None = None):
-    """1×4 bar chart: last.pt vs best.pt for PSNR, SSIM, LPIPS, FID.
-
-    Y-axes are anchored to the theoretical/practical maximum of each metric so
-    bar heights reflect actual quality, not just relative difference between runs.
-
-    Args:
-        metrics: {"last": {metric: value, ...}, "best": {metric: value, ...}}
-        title: optional suptitle
-        save_path: optional file path to save the figure
-    """
-    # (key, label, higher_is_better, y_max — None = auto with 25% headroom)
-    metric_meta = [
-        ("psnr",  "PSNR (dB)",  True,  50.0),   # 50 dB practical ceiling
-        ("ssim",  "SSIM",       True,   1.0),    # [0, 1] by definition
-        ("lpips", "LPIPS",      False,  1.0),    # [0, 1] by definition
-        ("fid",   "FID",        False, None),    # unbounded — auto-scale
-    ]
-    colors = {"last": "#4C72B0", "best": "#DD8452"}
-    fig, axes = plt.subplots(1, 4, figsize=(12, 4))
-    for ax, (key, label, higher_better, y_max) in zip(axes, metric_meta):
-        vals = [float(metrics["last"].get(key, float("nan"))),
-                float(metrics["best"].get(key, float("nan")))]
-        bars = ax.bar(["last.pt", "best.pt"], vals,
-                      color=[colors["last"], colors["best"]],
-                      width=0.5, edgecolor="white", linewidth=0.8)
-        if y_max is not None:
-            ax.set_ylim(0, y_max)
-        else:
-            data_max = max((v for v in vals if not np.isnan(v)), default=1.0)
-            ax.set_ylim(0, data_max * 1.25)
-        ax_top = ax.get_ylim()[1]
-        for bar, v in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + ax_top * 0.02,
-                    f"{v:.4f}", ha="center", va="bottom", fontsize=8)
-        ax.set_title(label, fontsize=10)
-        ax.set_ylabel("↑ higher better" if higher_better else "↓ lower better",
-                      fontsize=7, color="gray")
-        ax.tick_params(axis="x", labelsize=9)
-        ax.grid(axis="y", alpha=0.3)
-        ax.spines[["top", "right"]].set_visible(False)
-    if title:
-        fig.suptitle(title, fontsize=12, fontweight="bold")
-    fig.tight_layout()
-    _save(fig, save_path)
-    plt.show()
-
-
 def multi_model_grid(sketch: torch.Tensor, predictions: dict[str, torch.Tensor],
                      target: torch.Tensor, save_path: str | None = None):
     """Grid comparing all variants on the same sketches.
