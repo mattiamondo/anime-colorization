@@ -1,14 +1,5 @@
 #!/usr/bin/env python
-"""Headless training runner for variant 2 (Pix2Pix: U-Net + PatchGAN + L1).
-
-Adds the 70×70 PatchGAN discriminator to the L1 baseline. The GAN adversarial
-signal pushes the generator toward sharper, more saturated colors.
-
-Usage (inside the conda env, in a tmux session):
-    python scripts/train_02_pix2pix.py
-    python scripts/train_02_pix2pix.py 2>&1 | tee results/logs/02_pix2pix.log
-    CUDA_VISIBLE_DEVICES=N python scripts/train_02_pix2pix.py
-"""
+"""Headless training runner for variant 2 (Pix2Pix: U-Net + PatchGAN + L1)."""
 
 import os
 
@@ -38,7 +29,7 @@ CONFIG = dict(
     lambda_gan=1.0,
     lambda_perceptual=0.0,
     discriminator_type="patch",
-    early_stopping=False,  # GAN variants run for fixed epochs; val_l1 biases best.pt toward sepia
+    early_stopping=False, 
 )
 
 DATA_ROOT = ROOT / "data" / "anime_colorization"

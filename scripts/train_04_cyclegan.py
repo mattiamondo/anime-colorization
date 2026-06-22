@@ -1,19 +1,5 @@
 #!/usr/bin/env python
-"""Headless training runner for variant 4 (CycleGAN, unpaired).
-
-Trained WITHOUT pairing information: sketch and color images are sampled
-independently (paired=False in the dataset). Pairs exist but the model never
-sees them during training — this intentionally simulates the unpaired setting
-to quantify the value of paired supervision (Pix2Pix variants 2/3) vs unpaired.
-
-Validation and checkpoint selection use paired=True so best.pt tracks the
-sketch→color generator quality against ground-truth colors.
-
-Usage (inside the conda env, in a tmux session):
-    python scripts/train_04_cyclegan.py
-    python scripts/train_04_cyclegan.py 2>&1 | tee results/logs/04_cyclegan.log
-    CUDA_VISIBLE_DEVICES=N python scripts/train_04_cyclegan.py
-"""
+"""Headless training runner for variant 4 (CycleGAN, unpaired)."""
 
 import os
 
@@ -33,8 +19,6 @@ from src.training import CycleGANTrainer
 from src.utils import seed_everything
 
 # Keep in sync with notebooks/04_cyclegan.ipynb.
-# batch_size=8: CycleGAN has 4 networks (2 G + 2 D), much heavier than Pix2Pix.
-# decay_start=50: constant LR for first 50 epochs, linear decay to 0 for the rest.
 CONFIG = dict(
     image_size=256,
     batch_size=8,

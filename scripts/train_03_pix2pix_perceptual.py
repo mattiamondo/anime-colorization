@@ -3,11 +3,6 @@
 
 Adds VGG-19 feature-space supervision (relu_1_2, relu_2_2, relu_3_3) to the
 Pix2Pix objective. All other hyper-parameters are identical to variant 2.
-
-Usage (inside the conda env, in a tmux session):
-    python scripts/train_03_pix2pix_perceptual.py
-    python scripts/train_03_pix2pix_perceptual.py 2>&1 | tee results/logs/03_pix2pix_perceptual.log
-    CUDA_VISIBLE_DEVICES=N python scripts/train_03_pix2pix_perceptual.py
 """
 
 import os
@@ -36,7 +31,7 @@ CONFIG = dict(
     lr=2e-4,
     lambda_l1=100.0,
     lambda_gan=1.0,
-    lambda_perceptual=10.0,   # VGG-19 feature-space loss weight
+    lambda_perceptual=10.0,   
     discriminator_type="patch",
     early_stopping=False,
 )

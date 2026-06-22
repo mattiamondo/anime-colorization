@@ -1,19 +1,5 @@
 #!/usr/bin/env python
-"""Headless training runner for variant 6 (Pix2Pix: lambda ablation, L1=50, GAN=10).
-
-Same architecture as variant 2 (U-Net + PatchGAN) but with rebalanced loss weights:
-- lambda_l1=50  (halved from 100)
-- lambda_gan=10 (10x the standard weight)
-
-The increased GAN weight pushes the generator toward more saturated, vivid colors
-at the cost of slightly lower pixel-level fidelity. This ablation isolates the
-effect of the L1/GAN trade-off, independently of the discriminator architecture.
-
-Usage (inside the conda env, in a tmux session):
-    python scripts/train_06_pix2pix_lambda.py
-    python scripts/train_06_pix2pix_lambda.py 2>&1 | tee results/logs/06_pix2pix_lambda.log
-    CUDA_VISIBLE_DEVICES=N python scripts/train_06_pix2pix_lambda.py
-"""
+"""Headless training runner for variant 6 (Pix2Pix: lambda ablation, L1=50, GAN=10)."""
 
 import os
 
@@ -33,7 +19,6 @@ from src.training import Pix2PixTrainer
 from src.utils import seed_everything
 
 # Keep in sync with notebooks/06_pix2pix_lambda.ipynb.
-# Identical to variant 2 (train_02_pix2pix.py) except the lambda ratio.
 CONFIG = dict(
     image_size=256,
     batch_size=16,

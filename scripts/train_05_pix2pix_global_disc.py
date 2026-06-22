@@ -1,15 +1,5 @@
 #!/usr/bin/env python
-"""Headless training runner for variant 5 (Pix2Pix + global discriminator).
-
-Replaces the 70×70 PatchGAN with a global discriminator (single scalar per
-image) to isolate the contribution of patch-level adversarial signal on local
-texture sharpness. All other hyper-parameters are identical to variant 2.
-
-Usage (inside the conda env, in a tmux session):
-    python scripts/train_05_pix2pix_global_disc.py
-    python scripts/train_05_pix2pix_global_disc.py 2>&1 | tee results/logs/05_pix2pix_global_disc.log
-    CUDA_VISIBLE_DEVICES=N python scripts/train_05_pix2pix_global_disc.py
-"""
+"""Headless training runner for variant 5 (Pix2Pix + global discriminator)."""
 
 import os
 
@@ -29,7 +19,6 @@ from src.training import Pix2PixTrainer
 from src.utils import seed_everything
 
 # Keep in sync with notebooks/05_pix2pix_global_disc.ipynb.
-# Identical to variant 2 (train_02_pix2pix.py) except discriminator_type="global".
 CONFIG = dict(
     image_size=256,
     batch_size=16,

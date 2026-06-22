@@ -1,14 +1,5 @@
 #!/usr/bin/env python
-"""Headless training runner for variant 1 (U-Net + L1 baseline).
-
-Pure L1 regression: U-Net encoder-decoder with skip connections, no adversarial
-or perceptual loss. Serves as the lower-bound baseline in the ablation study.
-
-Usage (inside the conda env, in a tmux session):
-    python scripts/train_01_unet_l1.py
-    python scripts/train_01_unet_l1.py 2>&1 | tee results/logs/01_unet_l1.log
-    CUDA_VISIBLE_DEVICES=N python scripts/train_01_unet_l1.py
-"""
+"""Headless training runner for variant 1 (U-Net + L1 baseline)."""
 
 import os
 
@@ -35,10 +26,10 @@ CONFIG = dict(
     epochs=100,
     lr=2e-4,
     lambda_l1=100.0,
-    lambda_gan=0.0,        # no discriminator -> variant 1
+    lambda_gan=0.0,        
     lambda_perceptual=0.0,
     patience=20,
-    early_stopping=True,   # val_l1 is the correct monitor for pure L1
+    early_stopping=True,   
 )
 
 DATA_ROOT = ROOT / "data" / "anime_colorization"
