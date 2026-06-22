@@ -1,8 +1,4 @@
-"""U-Net generator with skip connections.
-
-Used by: variant 1 (L1 baseline), variant 2 (Pix2Pix), variant 3
-(Pix2Pix + perceptual). Standard Pix2Pix architecture (Isola et al., 2017).
-"""
+"""U-Net generator with skip connections."""
 
 import torch
 import torch.nn as nn
@@ -32,13 +28,7 @@ def _up_block(in_ch: int, out_ch: int, dropout: bool = False) -> nn.Sequential:
 
 
 class UNetGenerator(nn.Module):
-    """Encoder-decoder with skip connections, 256x256 -> 256x256.
-
-    8 down blocks (256 -> 1) and 8 up blocks (1 -> 256); each decoder
-    block receives the concatenation of the previous decoder output and
-    the mirrored encoder feature map (skip connection). Dropout in the
-    first three decoder blocks as in the Pix2Pix paper.
-
+    """
     Args:
         in_channels: input channels (3 for RGB sketch).
         out_channels: output channels (3 for RGB color image).
@@ -79,7 +69,7 @@ class UNetGenerator(nn.Module):
         for down in self.downs:
             x = down(x)
             skips.append(x)
-        skips = skips[:-1][::-1]  # encoder outputs, deepest first, no bottleneck
+        skips = skips[:-1][::-1]  # inverted encoder outputs, no bottleneck
         for i, up in enumerate(self.ups):
             x = up(x)
             x = torch.cat([x, skips[i]], dim=1)
