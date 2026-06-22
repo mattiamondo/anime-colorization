@@ -93,29 +93,6 @@ def plot_loss_curves(history: dict[str, list[float]], title: str = "",
     plt.show()
 
 
-def qualitative_grid(sketch: torch.Tensor, prediction: torch.Tensor,
-                     target: torch.Tensor, n_rows: int = 4,
-                     title: str | None = None,
-                     save_path: str | None = None):
-    """Grid with columns: sketch | prediction | ground truth"""
-    n_rows = min(n_rows, sketch.shape[0])
-    fig, axes = plt.subplots(n_rows, 3, figsize=(9, 3 * n_rows))
-    axes = np.atleast_2d(axes)
-    for row in range(n_rows):
-        for col, (name, batch) in enumerate(
-                [("sketch", sketch), ("prediction", prediction),
-                 ("ground truth", target)]):
-            ax = axes[row, col]
-            ax.imshow(_denorm(batch[row]))
-            ax.axis("off")
-            if row == 0:
-                ax.set_title(name)
-    if title:
-        fig.suptitle(title, fontsize=12, y=1.01)
-    fig.tight_layout()
-    _save(fig, save_path)
-    plt.show()
-
 
 def qualitative_grid_compare(sketch: torch.Tensor,
                              pred_last: torch.Tensor, pred_best: torch.Tensor,
