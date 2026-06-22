@@ -1,12 +1,4 @@
-"""Shared training infrastructure for all variants.
-
-Responsibilities common to every experiment:
-- train/val loop orchestration
-- loss curve logging (history dict, saved to results/)
-- best-checkpoint saving by validation metric
-- resuming from checkpoint
-- optional Weights & Biases integration (scalars + image hook)
-"""
+"""Shared training infrastructure for all variants."""
 
 import math
 from pathlib import Path
@@ -18,11 +10,6 @@ from tqdm import tqdm
 
 class BaseTrainer:
     """Base class with the train/val loop, logging and checkpointing.
-
-    Subclasses build their networks/optimizers in ``__init__`` (registering
-    them via :meth:`register_network` and ``self.optimizers``) and implement
-    ``training_step`` / ``validation_step``, each returning a dict of scalar
-    logs (e.g. ``{"train_l1": 0.12}``).
 
     Args:
         train_loader / val_loader: dataloaders yielding dict batches.
