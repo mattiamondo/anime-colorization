@@ -5,8 +5,7 @@ import torch.nn as nn
 
 
 class GANLoss(nn.Module):
-    """Adversarial loss on patch logit maps.
-
+    """
     Args:
         mode: "vanilla" (BCEWithLogits, Pix2Pix) or "lsgan" (MSE, CycleGAN).
     """
