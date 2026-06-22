@@ -1,9 +1,4 @@
-"""Trainer for CycleGAN (variant 4, unpaired).
-
-IMPORTANT: must never use the pairing information — sketch and color
-batches are sampled independently (dataset with paired=False). The pairs
-are only used at EVALUATION time to compute SSIM/PSNR against ground truth.
-"""
+"""Trainer for CycleGAN (variant 4, unpaired)."""
 
 import random
 
@@ -17,8 +12,7 @@ from .base import BaseTrainer
 
 
 class _ImageBuffer:
-    """Replay buffer to stabilize discriminator training (Shrivastava et al., 2017).
-
+    """
     Stores up to `size` generated images. When queried:
     - with prob 0.5: returns the incoming image and stores it in the buffer.
     - with prob 0.5: returns a random image from the buffer, replacing it
@@ -59,7 +53,7 @@ class CycleGANTrainer(BaseTrainer):
     checkpoint selection.
 
     LR schedule: constant for the first `decay_start` epochs, then linear
-    decay to zero over the remaining epochs (paper: 100+100).
+    decay to zero over the remaining epochs.
 
     Args:
         lambda_cycle: weight of cycle-consistency loss (paper: 10).
@@ -69,8 +63,8 @@ class CycleGANTrainer(BaseTrainer):
         decay_start: epoch at which LR decay begins (paper: 100).
         use_amp: enable automatic mixed precision (fp16 autocast + GradScaler).
             CycleGAN is compute-bound (6 ResNet generator forwards + 2
-            discriminators per step), so AMP roughly halves the step time on
-            the RTX 3090. Disabled automatically on non-CUDA devices.
+            discriminators per step), so AMP roughly halves the step time.
+            Disabled automatically on non-CUDA devices.
     """
 
     def __init__(self, *, lambda_cycle: float = 10.0,
@@ -115,7 +109,6 @@ class CycleGANTrainer(BaseTrainer):
         self._schedulers: dict[str, torch.optim.lr_scheduler.LRScheduler] = {}
 
     def _build_schedulers(self, total_epochs: int) -> None:
-        """Call once before the training loop starts (fit() does this)."""
         decay_epochs = max(total_epochs - self.decay_start, 1)
 
         def lr_lambda(epoch: int) -> float:
@@ -164,7 +157,7 @@ class CycleGANTrainer(BaseTrainer):
     def training_step(self, batch: dict[str, torch.Tensor]) -> dict[str, float]:
         sketch, color = batch["sketch"], batch["color"]
 
-        # --- Generator step (freeze discriminators) ---
+        # Generator step
         for p in list(self.D_color.parameters()) + list(self.D_sketch.parameters()):
             p.requires_grad_(False)
 
@@ -194,7 +187,7 @@ class CycleGANTrainer(BaseTrainer):
         self.scaler.scale(loss_g).backward()
         self.scaler.step(opt_g)
 
-        # --- D_color step ---
+        # D_color step
         for p in self.D_color.parameters():
             p.requires_grad_(True)
 
@@ -207,7 +200,7 @@ class CycleGANTrainer(BaseTrainer):
         self.scaler.scale(loss_dc).backward()
         self.scaler.step(opt_dc)
 
-        # --- D_sketch step ---
+        # D_sketch step
         for p in self.D_sketch.parameters():
             p.requires_grad_(True)
 
