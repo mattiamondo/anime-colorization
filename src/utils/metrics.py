@@ -1,7 +1,6 @@
-"""Evaluation metrics: PSNR, SSIM, FID.
+"""Evaluation metrics: PSNR, SSIM, LPIPS, FID.
 
-All metrics are computed on the TEST set. Inputs are expected in [-1, 1]
-and remapped internally where needed.
+Inputs are expected in [-1, 1] and remapped internally where needed.
 """
 
 import shutil
@@ -53,9 +52,8 @@ def evaluate_model(generator: torch.nn.Module, test_loader, device: str = "cuda"
     """Run a generator over the test set and return {psnr, ssim, lpips, fid}.
 
     Args:
-        generator: nn.Module mapping sketch -> color (e.g. trainer.generator,
-            or a model loaded from checkpoint).
-        test_loader: dataloader over the test split (paired).
+        generator: nn.Module mapping sketch -> color (e.g. trainer.generator).
+        test_loader: dataloader over the test split.
         fid_dir: directory for generated/real PNGs used by FID. Wiped and
             recreated on each call so runs never mix images.
     """
