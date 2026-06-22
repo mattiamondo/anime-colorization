@@ -128,7 +128,6 @@ def cycle_grid(sketch: torch.Tensor, fake_color: torch.Tensor,
     """Forward-cycle visualization for CycleGAN: sketch → fake color → rec. sketch.
 
     Columns: sketch (input) | G_s2c(sketch) | G_c2s(G_s2c(sketch)) | ground truth.
-    Shows that cycle-consistency is satisfied even when colorization is wrong.
     """
     n_rows = min(n_rows, sketch.shape[0])
     columns = [
@@ -150,24 +149,3 @@ def cycle_grid(sketch: torch.Tensor, fake_color: torch.Tensor,
     _save(fig, save_path)
     plt.show()
 
-
-def multi_model_grid(sketch: torch.Tensor, predictions: dict[str, torch.Tensor],
-                     target: torch.Tensor, save_path: str | None = None):
-    """Grid comparing all variants on the same sketches.
-
-    Columns: sketch | variant 1 | ... | variant 5 | ground truth.
-    """
-    columns = [("sketch", sketch), *predictions.items(), ("ground truth", target)]
-    n_rows, n_cols = sketch.shape[0], len(columns)
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.2 * n_cols, 2.2 * n_rows))
-    axes = np.atleast_2d(axes)
-    for row in range(n_rows):
-        for col, (name, batch) in enumerate(columns):
-            ax = axes[row, col]
-            ax.imshow(_denorm(batch[row]))
-            ax.axis("off")
-            if row == 0:
-                ax.set_title(name)
-    fig.tight_layout()
-    _save(fig, save_path)
-    plt.show()
