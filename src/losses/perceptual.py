@@ -1,4 +1,4 @@
-"""VGG-19 perceptual loss (variant 3).
+"""VGG-19 perceptual loss.
 
 Compares features extracted from pretrained VGG-19 layers
 relu_1_2, relu_2_2, relu_3_3 between prediction and target.
@@ -39,8 +39,6 @@ class VGGPerceptualLoss(nn.Module):
         self.eval()
 
         # Register ImageNet constants as PyTorch buffers.
-        # This ensures they automatically move to the GPU via .to(device),
-        # are excluded from gradients, and are saved in the checkpoint.
         # Shape (1, 3, 1, 1) enables broadcasting across [B, 3, H, W] batches.
         self.register_buffer(
             "mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
