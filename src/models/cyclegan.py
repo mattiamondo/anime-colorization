@@ -1,8 +1,4 @@
-"""ResNet-based generator for CycleGAN (Zhu et al., 2017).
-
-CycleGAN uses two generators (sketch->color, color->sketch) and two
-PatchGAN discriminators (see patchgan.py, in_channels=3).
-"""
+"""ResNet-based generator for CycleGAN"""
 
 import torch
 import torch.nn as nn
@@ -26,11 +22,7 @@ class _ResidualBlock(nn.Module):
 
 
 class ResnetGenerator(nn.Module):
-    """ResNet generator with 9 residual blocks (256x256 resolution).
-
-    Architecture: c7s1-64, d128, d256, 9×R256, u128, u64, c7s1-3 + Tanh.
-    Reflection padding is used to reduce boundary artifacts.
-
+    """
     Args:
         in_channels: input channels (3).
         out_channels: output channels (3).
