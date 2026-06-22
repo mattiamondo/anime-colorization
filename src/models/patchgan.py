@@ -1,19 +1,11 @@
-"""PatchGAN discriminator (70x70 receptive field).
-
-Used by Pix2Pix (conditional: input = sketch concatenated with real/fake
-color image) and CycleGAN (unconditional: input = single image).
-"""
+"""PatchGAN discriminator (70x70 receptive field)."""
 
 import torch
 import torch.nn as nn
 
 
 class PatchGANDiscriminator(nn.Module):
-    """Standard 70x70 PatchGAN (Isola et al., 2017).
-
-    C64-C128-C256-C512 followed by a 1-channel conv: each output logit
-    judges a 70x70 patch of the input (30x30 map for 256x256 inputs).
-
+    """
     Args:
         in_channels: 6 for conditional Pix2Pix (sketch + image),
             3 for unconditional CycleGAN.
